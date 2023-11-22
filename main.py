@@ -17,7 +17,7 @@ from sgm.util import default, instantiate_from_config
 
 
 def sample(
-        input_path: str = "/Users/hylarucoder/1.jpeg",  # Can either be image file or folder with image files
+        input_path: str = "/root/svd-webui/1.png",
         num_frames: Optional[int] = None,
         num_steps: Optional[int] = None,
         version: str = "svd",
@@ -25,10 +25,8 @@ def sample(
         motion_bucket_id: int = 127,
         cond_aug: float = 0.02,
         seed: int = 23,
-        decoding_t: int = 14,  # Number of frames decoded at a time! This eats most VRAM. Reduce if necessary.
-        # device: str = "cuda",
-        device: str = "mps",
-        # device: str = "cpu",
+        decoding_t: int = 8,  # Number of frames decoded at a time! This eats most VRAM. Reduce if necessary.
+        device: str = "cuda",
         output_folder: Optional[str] = None,
 ):
     """
@@ -137,67 +135,67 @@ def sample(
         value_dict["cond_aug"] = cond_aug
 
         with torch.no_grad():
-            # with torch.autocast(device):
-            batch, batch_uc = get_batch(
-                get_unique_embedder_keys_from_conditioner(model.conditioner),
-                value_dict,
-                [1, num_frames],
-                T=num_frames,
-                device=device,
-            )
-            c, uc = model.conditioner.get_unconditional_conditioning(
-                batch,
-                batch_uc=batch_uc,
-                force_uc_zero_embeddings=[
-                    "cond_frames",
-                    "cond_frames_without_noise",
-                ],
-            )
-
-            for k in ["crossattn", "concat"]:
-                uc[k] = repeat(uc[k], "b ... -> b t ...", t=num_frames)
-                uc[k] = rearrange(uc[k], "b t ... -> (b t) ...", t=num_frames)
-                c[k] = repeat(c[k], "b ... -> b t ...", t=num_frames)
-                c[k] = rearrange(c[k], "b t ... -> (b t) ...", t=num_frames)
-
-            randn = torch.randn(shape, device=device)
-
-            additional_model_inputs = {}
-            additional_model_inputs["image_only_indicator"] = torch.zeros(
-                2, num_frames
-            ).to(device)
-            additional_model_inputs["num_video_frames"] = batch["num_video_frames"]
-
-            def denoiser(input, sigma, c):
-                return model.denoiser(
-                    model.model, input, sigma, c, **additional_model_inputs
+            with torch.autocast(device):
+                batch, batch_uc = get_batch(
+                    get_unique_embedder_keys_from_conditioner(model.conditioner),
+                    value_dict,
+                    [1, num_frames],
+                    T=num_frames,
+                    device=device,
+                )
+                c, uc = model.conditioner.get_unconditional_conditioning(
+                    batch,
+                    batch_uc=batch_uc,
+                    force_uc_zero_embeddings=[
+                        "cond_frames",
+                        "cond_frames_without_noise",
+                    ],
                 )
 
-            samples_z = model.sampler(denoiser, randn, cond=c, uc=uc)
-            model.en_and_decode_n_samples_a_time = decoding_t
-            samples_x = model.decode_first_stage(samples_z)
-            samples = torch.clamp((samples_x + 1.0) / 2.0, min=0.0, max=1.0)
+                for k in ["crossattn", "concat"]:
+                    uc[k] = repeat(uc[k], "b ... -> b t ...", t=num_frames)
+                    uc[k] = rearrange(uc[k], "b t ... -> (b t) ...", t=num_frames)
+                    c[k] = repeat(c[k], "b ... -> b t ...", t=num_frames)
+                    c[k] = rearrange(c[k], "b t ... -> (b t) ...", t=num_frames)
 
-            os.makedirs(output_folder, exist_ok=True)
-            base_count = len(glob(os.path.join(output_folder, "*.mp4")))
-            video_path = os.path.join(output_folder, f"{base_count:06d}.mp4")
-            writer = cv2.VideoWriter(
-                video_path,
-                cv2.VideoWriter_fourcc(*"MP4V"),
-                fps_id + 1,
-                (samples.shape[-1], samples.shape[-2]),
-            )
+                randn = torch.randn(shape, device=device)
 
-            vid = (
-                (rearrange(samples, "t c h w -> t h w c") * 255)
-                .cpu()
-                .numpy()
-                .astype(np.uint8)
-            )
-            for frame in vid:
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                writer.write(frame)
-            writer.release()
+                additional_model_inputs = {}
+                additional_model_inputs["image_only_indicator"] = torch.zeros(
+                    2, num_frames
+                ).to(device)
+                additional_model_inputs["num_video_frames"] = batch["num_video_frames"]
+
+                def denoiser(input, sigma, c):
+                    return model.denoiser(
+                        model.model, input, sigma, c, **additional_model_inputs
+                    )
+
+                samples_z = model.sampler(denoiser, randn, cond=c, uc=uc)
+                model.en_and_decode_n_samples_a_time = decoding_t
+                samples_x = model.decode_first_stage(samples_z)
+                samples = torch.clamp((samples_x + 1.0) / 2.0, min=0.0, max=1.0)
+
+                os.makedirs(output_folder, exist_ok=True)
+                base_count = len(glob(os.path.join(output_folder, "*.mp4")))
+                video_path = os.path.join(output_folder, f"{base_count:06d}.mp4")
+                writer = cv2.VideoWriter(
+                    video_path,
+                    cv2.VideoWriter_fourcc(*"MP4V"),
+                    fps_id + 1,
+                    (samples.shape[-1], samples.shape[-2]),
+                )
+
+                vid = (
+                    (rearrange(samples, "t c h w -> t h w c") * 255)
+                    .cpu()
+                    .numpy()
+                    .astype(np.uint8)
+                )
+                for frame in vid:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    writer.write(frame)
+                writer.release()
 
 
 def get_unique_embedder_keys_from_conditioner(conditioner):
