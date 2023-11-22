@@ -7,8 +7,8 @@ from typing import Optional
 import cv2
 import numpy as np
 import torch
+import typer
 from einops import rearrange, repeat
-from fire import Fire
 from omegaconf import OmegaConf
 from PIL import Image
 from torchvision.transforms import ToTensor
@@ -17,17 +17,17 @@ from sgm.util import default, instantiate_from_config
 
 
 def sample(
-        input_path: str = "/root/svd-webui/1.png",
-        num_frames: Optional[int] = None,
-        num_steps: Optional[int] = None,
-        version: str = "svd",
-        fps_id: int = 6,
-        motion_bucket_id: int = 127,
-        cond_aug: float = 0.02,
-        seed: int = 23,
-        decoding_t: int = 8,  # Number of frames decoded at a time! This eats most VRAM. Reduce if necessary.
-        device: str = "cuda",
-        output_folder: Optional[str] = None,
+        input_path: str = typer.Option("/root/svd-webui/1.png", help="The input path"),
+        num_frames: Optional[int] = typer.Option(None, help="Number of frames"),
+        num_steps: Optional[int] = typer.Option(None, help="Number of steps"),
+        version: str = typer.Option("svd", help="Version"),
+        fps_id: int = typer.Option(6, help="FPS ID"),
+        motion_bucket_id: int = typer.Option(127, help="Motion bucket ID"),
+        cond_aug: float = typer.Option(0.02, help="Condition augmentation"),
+        seed: int = typer.Option(23, help="Seed"),
+        decoding_t: int = typer.Option(8, help="Number of frames decoded at a time"),
+        device: str = typer.Option("cuda", help="Device to use"),
+        output_folder: Optional[str] = typer.Option(None, help="Output folder"),
 ):
     """
     Simple script to generate a single sample conditioned on an image `input_path` or multiple images, one for each
@@ -37,25 +37,25 @@ def sample(
     if version == "svd":
         num_frames = default(num_frames, 14)
         num_steps = default(num_steps, 25)
-        output_folder = default(output_folder, "outputs/simple_video_sample/svd/")
+        output_folder = default(output_folder, "outputs/svd/")
         model_config = "configs/svd.yaml"
     elif version == "svd_xt":
         num_frames = default(num_frames, 25)
         num_steps = default(num_steps, 30)
-        output_folder = default(output_folder, "outputs/simple_video_sample/svd_xt/")
+        output_folder = default(output_folder, "outputs/svd_xt/")
         model_config = "configs/svd_xt.yaml"
     elif version == "svd_image_decoder":
         num_frames = default(num_frames, 14)
         num_steps = default(num_steps, 25)
         output_folder = default(
-            output_folder, "outputs/simple_video_sample/svd_image_decoder/"
+            output_folder, "outputs/svd_image_decoder/"
         )
         model_config = "configs/svd_image_decoder.yaml"
     elif version == "svd_xt_image_decoder":
         num_frames = default(num_frames, 25)
         num_steps = default(num_steps, 30)
         output_folder = default(
-            output_folder, "outputs/simple_video_sample/svd_xt_image_decoder/"
+            output_folder, "outputs/svd_xt_image_decoder/"
         )
         model_config = "configs/svd_xt_image_decoder.yaml"
     else:
@@ -269,4 +269,4 @@ def load_model(
 
 
 if __name__ == "__main__":
-    Fire(sample)
+    typer.run(sample)
