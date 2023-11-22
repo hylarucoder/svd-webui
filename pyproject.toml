@@ -1,0 +1,102 @@
+[project]
+name = "svd-webui"
+version = "0.1.0"
+description = ""
+authors = [
+    { name = "hylarucoder", email = "twocucao@gmail.com" },
+]
+dependencies = [
+    "colorama>=0.4.6",
+    "accelerate>=0.24.1",
+    "cmake>=3.27.7",
+    "diffusers>=0.21.2",
+    "einops>=0.7.0",
+    "gdown>=4.7.1",
+    "ninja>=1.11.1.1",
+    "numpy>=1.26.1",
+    "omegaconf>=2.3.0",
+    "pillow>=10.0.0",
+    "pydantic>=2.4.2",
+    "rich>=13.6.0",
+    "safetensors>=0.4.0",
+    "sentencepiece>=0.1.99",
+    "shellingham>=1.5.4",
+    "typer>=0.9.0",
+    "controlnet-aux>=0.0.7",
+    "matplotlib>=3.8.1",
+    "ffmpeg-python>=0.2.0",
+    "mediapipe>=0.10.7",
+    "pydantic-settings>=2.0.3",
+    "pandas>=2.1.2",
+    "fastapi>=0.104.1",
+    "gradio>=4.1.2",
+    "httpx>=0.25.1",
+    "socksio>=1.0.0",
+    "fire>=0.5.0",
+]
+requires-python = ">=3.10,<3.13"
+readme = "README.md"
+license = { text = "Apache" }
+
+[project.optional-dependencies]
+
+macos = [
+]
+
+linux = [
+    "onnxruntime>=1.16.0",
+]
+
+tests = [
+    'ddt >= 1.2.2, < 2',
+    'pytest >= 6',
+]
+socks = ['PySocks >= 1.5.6, != 1.5.7, < 2']
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.ruff]
+line-length = 120
+target-version = 'py310'
+ignore = ['F841', 'F401', 'E501', 'D211', 'D213']
+select = [
+    "F", # pyflakes
+    "E", # pycodestyle
+    "W", # pycodestyle warnings
+    "I", # isort
+    "D", # pydocstyle
+]
+
+[tool.ruff.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+known-local-folder = ["src"]
+known-first-party = ["animatediff"]
+
+[tool.pdm]
+[tool.pdm.build]
+includes = [
+    "svd_webui",
+]
+
+[[tool.pdm.source]]
+name = "tencent"
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pre-commit>=3.5.0",
+    "ruff>=0.1.4",
+    "pytest>=7.4.3",
+]
+
+[project.scripts]
+svd-cli = "animatediff.cli:cli"
+
+[tool.pdm.scripts]
+lint = "flake8"
+test = "pytest"
+all = { composite = ["lint", "test"] }
+
