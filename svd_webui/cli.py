@@ -17,17 +17,17 @@ from sgm.util import instantiate_from_config
 
 
 def cli(
-    image: Image,
-    num_frames: int,
-    num_steps: int,
-    checkpoint: str,
-    fps_id: int,
-    motion_bucket_id,
-    cond_aug,
-    seed,
-    decoding_t,
-    progress: gr.Progress,
-    device: str = "cuda",
+        image: Image,
+        num_frames: int,
+        num_steps: int,
+        checkpoint: str,
+        fps_id: int,
+        motion_bucket_id,
+        cond_aug,
+        seed,
+        decoding_t,
+        progress: gr.Progress,
+        device: str = "cuda",
 ):
     progress(0.01, "Processing Image")
     model_config = f"configs/{checkpoint}.yaml"
@@ -41,7 +41,7 @@ def cli(
     if h % 64 != 0 or w % 64 != 0:
         width, height = map(lambda x: x - x % 64, (w, h))
         image = image.resize((width, height))
-        gr.warning(
+        gr.Warning(
             f"WARNING: Your image is of size {h}x{w} which is not divisible by 64. We are resizing to {width}x{height}!"
         )
 
@@ -55,13 +55,13 @@ def cli(
     C = 4
     shape = (num_frames, C, H // F, W // F)
     if (H, W) != (576, 1024):
-        print(
+        gr.Warning(
             "WARNING: The conditioning frame you provided is not 576x1024. This leads to suboptimal performance as model was only trained on 576x1024. Consider increasing `cond_aug`."
         )
 
     progress(0.02, "Download model")
     if checkpoint not in ["svd", "svd_image_decoder", "svd_xt", "svd_xt_image_decoder"]:
-        raise ValueError("Invalid checkpoint")
+        raise gr.Error("Invalid checkpoint")
     ckpt_dir = get_ckpt_dir()
     if checkpoint in ["svd", "svd_image_decoder"]:
         download_hf_model("stabilityai/stable-video-diffusion-img2vid", ckpt_dir, checkpoint + ".safetensors")
@@ -79,13 +79,13 @@ def cli(
     torch.manual_seed(seed)
 
     if motion_bucket_id > 255:
-        print("WARNING: High motion bucket! This may lead to suboptimal performance.")
+        gr.Warning("WARNING: High motion bucket! This may lead to suboptimal performance.")
 
     if fps_id < 5:
-        print("WARNING: Small fps value! This may lead to suboptimal performance.")
+        gr.Warning("WARNING: Small fps value! This may lead to suboptimal performance.")
 
     if fps_id > 30:
-        print("WARNING: Large fps value! This may lead to suboptimal performance.")
+        gr.Warning("WARNING: Large fps value! This may lead to suboptimal performance.")
 
     value_dict = {
         "motion_bucket_id": motion_bucket_id,
@@ -208,11 +208,11 @@ def download_hf_model(repo_id, local_dir, f):
 
 
 def load_model(
-    config: str,
-    device: str,
-    num_frames: int,
-    num_steps: int,
-    lowvram_mode: bool = False,
+        config: str,
+        device: str,
+        num_frames: int,
+        num_steps: int,
+        lowvram_mode: bool = False,
 ):
     config = OmegaConf.load(config)
     if device == "cuda":
