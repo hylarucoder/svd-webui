@@ -106,16 +106,16 @@ def render_ui():
                 with gr.Row():
                     with gr.Group():
                         ip_frames = gr.Number(
-                            12,
-                            36,
+                            minimum=12,
+                            maximum=36,
                             label="Frames",
                             value=preset_default.frames,
                             precision=0,
                             interactive=True,
                         )
                         ip_fps = gr.Number(
-                            5,
-                            30,
+                            minimum=5,
+                            maximum=30,
                             label="FPS",
                             value=preset_default.fps,
                             precision=0,
@@ -123,8 +123,8 @@ def render_ui():
                         )
                 with gr.Row():
                     ip_steps = gr.Number(
-                        20,
-                        40,
+                        minimum=20,
+                        maximum=40,
                         label="Steps",
                         value=preset_default.steps,
                         precision=0,

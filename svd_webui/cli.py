@@ -18,32 +18,22 @@ from sgm.util import instantiate_from_config
 
 def cli(
     image: Image,
-    num_frames: Optional[int] = typer.Option(None, help="Number of frames"),
-    num_steps: Optional[int] = typer.Option(None, help="Number of steps"),
-    checkpoint: str = typer.Option("svd", help="Version"),
-    fps_id: int = typer.Option(6, help="FPS ID"),
-    motion_bucket_id: int = typer.Option(127, help="Motion bucket ID"),
-    cond_aug: float = typer.Option(0.02, help="Condition augmentation"),
-    seed: int = typer.Option(23, help="Seed"),
-    decoding_t: int = typer.Option(
-        4, help="Number of frames decoded at a time, If you run out of VRAM, try decreasing"
-    ),
-    device: str = typer.Option("cuda", help="Device to use"),
-    progress: gr.Progress = None,
+    num_frames: int,
+    num_steps: int,
+    checkpoint: str,
+    fps_id: int,
+    motion_bucket_id,
+    cond_aug,
+    seed,
+    decoding_t,
+    progress: gr.Progress,
+    device: str = "cuda",
 ):
+    progress(0.01, "Processing Image")
     model_config = f"configs/{checkpoint}.yaml"
     output_folder = "./outputs"
-    progress(0.01, "Loading model")
-
-    model = load_model(
-        model_config,
-        device,
-        num_frames,
-        num_steps,
-    )
-    torch.manual_seed(seed)
-    progress(0.01, "Processing Image")
-
+    if not image:
+        raise ValueError("Something went wrong")
     if image.mode == "RGBA":
         image = image.convert("RGB")
     w, h = image.size
@@ -68,6 +58,26 @@ def cli(
         print(
             "WARNING: The conditioning frame you provided is not 576x1024. This leads to suboptimal performance as model was only trained on 576x1024. Consider increasing `cond_aug`."
         )
+
+    progress(0.02, "Download model")
+    if checkpoint not in ["svd", "svd_image_decoder", "svd_xt", "svd_xt_image_decoder"]:
+        raise ValueError("Invalid checkpoint")
+    ckpt_dir = get_ckpt_dir()
+    if checkpoint in ["svd", "svd_image_decoder"]:
+        download_hf_model("stabilityai/stable-video-diffusion-img2vid", ckpt_dir, checkpoint)
+    if checkpoint in ["svd", "svd_image_decoder"]:
+        download_hf_model("stabilityai/stable-video-diffusion-img2vid-xt", ckpt_dir, checkpoint)
+
+    progress(0.03, "Loading model")
+    model = load_model(
+        model_config,
+        device,
+        num_frames,
+        num_steps,
+        lowvram_mode=True,
+    )
+    torch.manual_seed(seed)
+
     if motion_bucket_id > 255:
         print("WARNING: High motion bucket! This may lead to suboptimal performance.")
 
@@ -178,11 +188,28 @@ def get_batch(keys, value_dict, N, T, device):
     return batch, batch_uc
 
 
+def get_ckpt_dir():
+    return os.environ.get("SVD_CKPT_PATH", "models/checkpoints/")
+
+
+def download_hf_model(repo_id, local_dir, f):
+    from huggingface_hub import hf_hub_download
+
+    hf_hub_download(
+        repo_id=repo_id,
+        filename=f,
+        local_dir=local_dir,
+        local_dir_use_symlinks=False,
+        resume_download=True,
+    )
+
+
 def load_model(
     config: str,
     device: str,
     num_frames: int,
     num_steps: int,
+    lowvram_mode: bool = False,
 ):
     config = OmegaConf.load(config)
     if device == "cuda":
@@ -192,12 +219,16 @@ def load_model(
 
     config.model.params.sampler_config.params.num_steps = num_steps
     config.model.params.sampler_config.params.guider_config.params.num_frames = num_frames
+    config.model.params.ckpt_path = get_ckpt_dir() + config.model.params.ckpt_path
+
     if device == "cuda":
         with torch.device(device):
             model = instantiate_from_config(config.model).to(device).eval()
     else:
         model = instantiate_from_config(config.model).to(device).eval()
 
+    if lowvram_mode:
+        model.model.half()
     return model
 
 
