@@ -194,7 +194,7 @@ def get_ckpt_dir():
 
 def download_hf_model(repo_id, local_dir, f):
     # check if the model is already downloaded
-    if os.path.exists(local_dir + f):
+    if os.path.exists(local_dir + "/" + f):
         return
     from huggingface_hub import hf_hub_download
 
