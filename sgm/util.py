@@ -13,7 +13,8 @@ from safetensors.torch import load_file as load_safetensors
 
 def disabled_train(self, mode=True):
     """Overwrite model.train with this function to make sure train/eval mode
-    does not change anymore."""
+    does not change anymore.
+    """
     return self
 
 
@@ -34,8 +35,7 @@ def get_string_from_tuple(s):
 
 
 def is_power_of_two(n):
-    """
-    chat.openai.com/chat
+    """chat.openai.com/chat
     Return True if n is a power of 2, otherwise return False.
 
     The function is_power_of_two takes an integer n as input and returns True if n is a power of 2, otherwise it returns False.
@@ -79,9 +79,7 @@ def log_txt_as_img(wh, xc, size=10):
             text_seq = xc[bi][0]
         else:
             text_seq = xc[bi]
-        lines = "\n".join(
-            text_seq[start : start + nc] for start in range(0, len(text_seq), nc)
-        )
+        lines = "\n".join(text_seq[start : start + nc] for start in range(0, len(text_seq), nc))
 
         try:
             draw.text((0, 0), lines, fill="black", font=font)
@@ -151,8 +149,7 @@ def default(val, d):
 
 
 def mean_flat(tensor):
-    """
-    https://github.com/openai/guided-diffusion/blob/27c20a8fab9cb472df5d6bdd6c8d11c8f430b924/guided_diffusion/nn.py#L86
+    """https://github.com/openai/guided-diffusion/blob/27c20a8fab9cb472df5d6bdd6c8d11c8f430b924/guided_diffusion/nn.py#L86
     Take the mean over all non-batch dimensions.
     """
     return tensor.mean(dim=list(range(1, len(tensor.shape))))
@@ -166,7 +163,7 @@ def count_params(model, verbose=False):
 
 
 def instantiate_from_config(config):
-    if not "target" in config:
+    if "target" not in config:
         if config == "__is_first_stage__":
             return None
         elif config == "__is_unconditional__":
@@ -193,9 +190,7 @@ def append_dims(x, target_dims):
     """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
     dims_to_append = target_dims - x.ndim
     if dims_to_append < 0:
-        raise ValueError(
-            f"input has {x.ndim} dims but target_dims is {target_dims}, which is less"
-        )
+        raise ValueError(f"input has {x.ndim} dims but target_dims is {target_dims}, which is less")
     return x[(...,) + (None,) * dims_to_append]
 
 
@@ -231,8 +226,7 @@ def load_model_from_config(config, ckpt, verbose=True, freeze=True):
 
 
 def get_configs_path() -> str:
-    """
-    Get the `configs` directory.
+    """Get the `configs` directory.
     For a working copy, this is the one in the root of the repository,
     but for an installed copy, it's in the `sgm` package (see pyproject.toml).
     """
@@ -249,8 +243,7 @@ def get_configs_path() -> str:
 
 
 def get_nested_attribute(obj, attribute_path, depth=None, return_key=False):
-    """
-    Will return the result of a recursive get attribute call.
+    """Will return the result of a recursive get attribute call.
     E.g.:
         a.b.c
         = getattr(getattr(a, "b"), "c")

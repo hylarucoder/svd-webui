@@ -5,14 +5,15 @@ from typing import Optional
 
 from omegaconf import OmegaConf
 
-from sgm.inference.helpers import (Img2ImgDiscretizationWrapper, do_img2img,
-                                   do_sample)
-from sgm.modules.diffusionmodules.sampling import (DPMPP2MSampler,
-                                                   DPMPP2SAncestralSampler,
-                                                   EulerAncestralSampler,
-                                                   EulerEDMSampler,
-                                                   HeunEDMSampler,
-                                                   LinearMultistepSampler)
+from sgm.inference.helpers import Img2ImgDiscretizationWrapper, do_img2img, do_sample
+from sgm.modules.diffusionmodules.sampling import (
+    DPMPP2MSampler,
+    DPMPP2SAncestralSampler,
+    EulerAncestralSampler,
+    EulerEDMSampler,
+    HeunEDMSampler,
+    LinearMultistepSampler,
+)
 from sgm.util import load_model_from_config
 
 
@@ -279,18 +280,14 @@ class SamplingPipeline:
 
 def get_guider_config(params: SamplingParams):
     if params.guider == Guider.IDENTITY:
-        guider_config = {
-            "target": "sgm.modules.diffusionmodules.guiders.IdentityGuider"
-        }
+        guider_config = {"target": "sgm.modules.diffusionmodules.guiders.IdentityGuider"}
     elif params.guider == Guider.VANILLA:
         scale = params.scale
 
         thresholder = params.thresholder
 
         if thresholder == Thresholder.NONE:
-            dyn_thresh_config = {
-                "target": "sgm.modules.diffusionmodules.sampling_utils.NoDynamicThresholding"
-            }
+            dyn_thresh_config = {"target": "sgm.modules.diffusionmodules.sampling_utils.NoDynamicThresholding"}
         else:
             raise NotImplementedError
 

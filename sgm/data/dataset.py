@@ -39,9 +39,7 @@ class StableDataModuleFromConfig(LightningDataModule):
                     "datapipeline" in self.val_config and "loader" in self.val_config
                 ), "validation config requires the fields `datapipeline` and `loader`"
             else:
-                print(
-                    "Warning: No Validation datapipeline defined, using that one from training"
-                )
+                print("Warning: No Validation datapipeline defined, using that one from training")
                 self.val_config = train
 
         self.test_config = test

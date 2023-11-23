@@ -7,24 +7,18 @@ authors = [
 ]
 dependencies = [
     "colorama>=0.4.6",
-    "accelerate>=0.24.1",
     "cmake>=3.27.7",
-    "diffusers>=0.21.2",
     "einops>=0.7.0",
     "gdown>=4.7.1",
     "ninja>=1.11.1.1",
     "numpy>=1.26.1",
-    "omegaconf>=2.3.0",
     "pillow>=10.0.0",
     "pydantic>=2.4.2",
     "rich>=13.6.0",
-    "safetensors>=0.4.0",
-    "sentencepiece>=0.1.99",
     "shellingham>=1.5.4",
     "typer>=0.9.0",
-    "controlnet-aux>=0.0.7",
-    "matplotlib>=3.8.1",
     "ffmpeg-python>=0.2.0",
+    "matplotlib>=3.8.1",
     "mediapipe>=0.10.7",
     "pydantic-settings>=2.0.3",
     "pandas>=2.1.2",
@@ -33,6 +27,7 @@ dependencies = [
     "httpx>=0.25.1",
     "socksio>=1.0.0",
     "fire>=0.5.0",
+    "pre-commit>=3.5.0",
 ]
 requires-python = ">=3.10,<3.13"
 readme = "README.md"
@@ -81,9 +76,6 @@ includes = [
     "svd_webui",
 ]
 
-[[tool.pdm.source]]
-name = "tencent"
-url = "https://mirrors.cloud.tencent.com/pypi/simple"
 
 [tool.pdm.dev-dependencies]
 dev = [
@@ -93,7 +85,7 @@ dev = [
 ]
 
 [project.scripts]
-svd-cli = "animatediff.cli:cli"
+svd-cli = "svd_webui.cli:cli"
 
 [tool.pdm.scripts]
 lint = "flake8"

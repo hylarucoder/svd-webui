@@ -71,12 +71,8 @@ class VideoResBlock(ResBlock):
         x_mix = rearrange(x, "(b t) c h w -> b c t h w", t=num_video_frames)
         x = rearrange(x, "(b t) c h w -> b c t h w", t=num_video_frames)
 
-        x = self.time_stack(
-            x, rearrange(emb, "(b t) ... -> b t ...", t=num_video_frames)
-        )
-        x = self.time_mixer(
-            x_spatial=x_mix, x_temporal=x, image_only_indicator=image_only_indicator
-        )
+        x = self.time_stack(x, rearrange(emb, "(b t) ... -> b t ...", t=num_video_frames))
+        x = self.time_mixer(x_spatial=x_mix, x_temporal=x, image_only_indicator=image_only_indicator)
         x = rearrange(x, "b c t h w -> (b t) c h w")
         return x
 
@@ -133,9 +129,7 @@ class VideoUNet(nn.Module):
         self.out_channels = out_channels
         if isinstance(transformer_depth, int):
             transformer_depth = len(channel_mult) * [transformer_depth]
-        transformer_depth_middle = default(
-            transformer_depth_middle, transformer_depth[-1]
-        )
+        transformer_depth_middle = default(transformer_depth_middle, transformer_depth[-1])
 
         self.num_res_blocks = num_res_blocks
         self.attention_resolutions = attention_resolutions
@@ -184,11 +178,7 @@ class VideoUNet(nn.Module):
                 raise ValueError()
 
         self.input_blocks = nn.ModuleList(
-            [
-                TimestepEmbedSequential(
-                    conv_nd(dims, in_channels, model_channels, 3, padding=1)
-                )
-            ]
+            [TimestepEmbedSequential(conv_nd(dims, in_channels, model_channels, 3, padding=1))]
         )
         self._feature_size = model_channels
         input_block_chans = [model_channels]
