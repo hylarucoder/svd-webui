@@ -92,7 +92,7 @@ def render_ui():
                 with gr.Column(scale=1):
                     generate_button = gr.Button(value="Generate", visible=True)
                     stop_button = gr.Button(
-                        "Stop",
+                        "Stop TODO: not implemented yet",
                         interactive=False,
                     )
 
