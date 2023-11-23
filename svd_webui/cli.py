@@ -58,6 +58,14 @@ def cli(
         gr.Warning(
             "WARNING: The conditioning frame you provided is not 576x1024. This leads to suboptimal performance as model was only trained on 576x1024. Consider increasing `cond_aug`."
         )
+    if motion_bucket_id > 255:
+        gr.Warning("WARNING: High motion bucket! This may lead to suboptimal performance.")
+
+    if fps_id < 5:
+        gr.Warning("WARNING: Small fps value! This may lead to suboptimal performance.")
+
+    if fps_id > 30:
+        gr.Warning("WARNING: Large fps value! This may lead to suboptimal performance.")
 
     progress(0.02, "Download model")
     if checkpoint not in ["svd", "svd_image_decoder", "svd_xt", "svd_xt_image_decoder"]:
@@ -77,15 +85,7 @@ def cli(
         lowvram_mode=True,
     )
     torch.manual_seed(seed)
-
-    if motion_bucket_id > 255:
-        gr.Warning("WARNING: High motion bucket! This may lead to suboptimal performance.")
-
-    if fps_id < 5:
-        gr.Warning("WARNING: Small fps value! This may lead to suboptimal performance.")
-
-    if fps_id > 30:
-        gr.Warning("WARNING: Large fps value! This may lead to suboptimal performance.")
+    progress(0.05, "Loading model success")
 
     value_dict = {
         "motion_bucket_id": motion_bucket_id,

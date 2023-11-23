@@ -78,7 +78,8 @@ def render_ui():
                     ...
 
         with gr.Column(scale=1):
-            btn_new_project = gr.Button("New", variant="secondary")
+            ...
+            # btn_new_project = gr.Button("New", variant="secondary")
 
     with gr.Row():
         with gr.Column(scale=3):
