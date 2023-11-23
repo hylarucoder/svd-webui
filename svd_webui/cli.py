@@ -41,8 +41,8 @@ def cli(
     if h % 64 != 0 or w % 64 != 0:
         width, height = map(lambda x: x - x % 64, (w, h))
         image = image.resize((width, height))
-        print(
-            f"WARNING: Your image is of size {h}x{w} which is not divisible by 64. We are resizing to {height}x{width}!"
+        gr.warning(
+            f"WARNING: Your image is of size {h}x{w} which is not divisible by 64. We are resizing to {width}x{height}!"
         )
 
     image = ToTensor()(image)
@@ -193,6 +193,9 @@ def get_ckpt_dir():
 
 
 def download_hf_model(repo_id, local_dir, f):
+    # check if the model is already downloaded
+    if os.path.exists(local_dir + f):
+        return
     from huggingface_hub import hf_hub_download
 
     hf_hub_download(
@@ -219,7 +222,7 @@ def load_model(
 
     config.model.params.sampler_config.params.num_steps = num_steps
     config.model.params.sampler_config.params.guider_config.params.num_frames = num_frames
-    config.model.params.ckpt_path = get_ckpt_dir() + config.model.params.ckpt_path
+    config.model.params.ckpt_path = get_ckpt_dir() + "/" + config.model.params.ckpt_path
 
     if device == "cuda":
         with torch.device(device):
