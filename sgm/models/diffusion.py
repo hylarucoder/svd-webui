@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pytorch_lightning as pl
 import torch
+import tqdm.auto
 from omegaconf import ListConfig, OmegaConf
 from safetensors.torch import load_file as load_safetensors
 from torch.optim.lr_scheduler import LambdaLR
@@ -13,6 +14,7 @@ from ..modules.autoencoding.temporal_ae import VideoDecoder
 from ..modules.diffusionmodules.wrappers import OPENAIUNETWRAPPER
 from ..modules.ema import LitEma
 from ..util import default, disabled_train, get_obj_from_str, instantiate_from_config, log_txt_as_img
+import tqdm
 
 
 class DiffusionEngine(pl.LightningModule):
@@ -98,7 +100,7 @@ class DiffusionEngine(pl.LightningModule):
         return batch[self.input_key]
 
     @torch.no_grad()
-    def decode_first_stage(self, z):
+    def decode_first_stage(self, z, processing_callback=None):
         z = 1.0 / self.scale_factor * z
         n_samples = default(self.en_and_decode_n_samples_a_time, z.shape[0])
 
@@ -106,6 +108,8 @@ class DiffusionEngine(pl.LightningModule):
         all_out = []
         with torch.autocast("cuda", enabled=not self.disable_first_stage_autocast):
             for n in range(n_rounds):
+                if processing_callback:
+                    processing_callback(n, n_rounds)
                 if isinstance(self.first_stage_model.decoder, VideoDecoder):
                     kwargs = {"timesteps": len(z[n * n_samples : (n + 1) * n_samples])}
                 else:
