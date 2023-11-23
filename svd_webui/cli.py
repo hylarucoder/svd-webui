@@ -16,6 +16,12 @@ from torchvision.transforms import ToTensor
 from sgm.util import instantiate_from_config
 
 
+def resize_image_to_w1024(image: Image):
+    w, h = image.size
+    if w > 1024:
+        image = image.resize((1024, int(1024 * h / w)))
+    return image
+
 def cli(
     image: Image,
     num_frames: int,
@@ -29,6 +35,7 @@ def cli(
     progress: gr.Progress,
     device: str = "cuda",
 ):
+    image = resize_image_to_w1024(image)
     progress(0.01, "Processing Image")
     model_config = f"configs/{checkpoint}.yaml"
     output_folder = "./outputs"
@@ -56,7 +63,7 @@ def cli(
     shape = (num_frames, C, H // F, W // F)
     if (H, W) != (576, 1024):
         gr.Warning(
-            "WARNING: The conditioning frame you provided is not 576x1024. This leads to suboptimal performance as model was only trained on 576x1024. Consider increasing `cond_aug`."
+            "WARNING: The conditioning frame you provided is not 1024x576. This leads to suboptimal performance as model was only trained on 1024x576. Consider increasing `cond_aug`."
         )
     if motion_bucket_id > 255:
         gr.Warning("WARNING: High motion bucket! This may lead to suboptimal performance.")
