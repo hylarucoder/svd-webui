@@ -246,3 +246,4 @@ src/animatediff/_version.py
 output/
 upscaled/
 src/ProPainter
+input_image/

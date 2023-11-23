@@ -1,3 +1,5 @@
+import os
+
 import gradio as gr
 import pydantic as pt
 
@@ -6,7 +8,7 @@ from svd_webui.cli import cli
 
 def group_by_n(l, n):
     for i in range(0, len(l), n):
-        yield l[i : i + n]
+        yield l[i: i + n]
 
 
 class TProjectSetting(pt.BaseModel):
@@ -164,19 +166,19 @@ def render_ui():
                     ip_seed = gr.Number(label="Seed", value=preset_default.seed, precision=0, interactive=True)
 
     def fn_generate(
-        image,
-        frames,
-        steps,
-        cond_aug,
-        checkpoint,
-        fps,
-        motion_bucket,
-        seed,
-        decoded_at_once,
-        data=None,
-        progress=gr.Progress(
-            track_tqdm=True,
-        ),
+            image,
+            frames,
+            steps,
+            cond_aug,
+            checkpoint,
+            fps,
+            motion_bucket,
+            seed,
+            decoded_at_once,
+            data=None,
+            progress=gr.Progress(
+                track_tqdm=True,
+            ),
     ):
         p = cli(
             image=image,
@@ -223,7 +225,7 @@ def render_ui():
     )
 
     def apply_preset(
-        preset_name,
+            preset_name,
     ):
         preset = next((_ for _ in presets if _.name == preset_name), None)
         return (
@@ -268,17 +270,20 @@ def render_ui():
 
 
 with gr.Blocks(
-    title="SVD WebUI",
-    css="""
+        title="SVD WebUI",
+        css="""
         video {
             height: 504px !important;
         }
         """,
-    theme=gr.themes.Default(
-        spacing_size="sm",
-        text_size="sm",
-    ),
+        theme=gr.themes.Default(
+            spacing_size="sm",
+            text_size="sm",
+        ),
 ) as demo:
     render_ui()
 
-demo.launch(server_name="0.0.0.0")
+server_port = 7860
+if os.environ.get("SVD_PORT"):
+    server_port = int(os.environ.get("SVD_PORT"))
+demo.launch(server_name="0.0.0.0", server_port=server_port)
