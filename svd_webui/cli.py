@@ -239,8 +239,6 @@ def load_model(
     config.model.params.sampler_config.params.guider_config.params.num_frames = num_frames
     config.model.params.ckpt_path = get_ckpt_dir() + "/" + config.model.params.ckpt_path
 
-    model = instantiate_from_config(config.model)
-
     if device == "cuda":
         with torch.device(device):
             model = instantiate_from_config(config.model).to(device).eval()
