@@ -126,7 +126,6 @@ def cli(
             }
 
             def denoiser(input, sigma, c):
-                print("denoiser", input)
                 return model.denoiser(model.model, input, sigma, c, **additional_model_inputs)
 
             progress(0.10, "start sampling")
