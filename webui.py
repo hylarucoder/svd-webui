@@ -19,7 +19,7 @@ class Preset(pt.BaseModel):
     name: str
     frames: int = 14
     steps: int = 20
-    checkpoint: str = ""
+    checkpoint: str = "svd"
     fps: int = 6
     motion_bucket: int = 127
     cond_aug: int = 0.02
@@ -99,7 +99,12 @@ def render_ui():
             with gr.Tab(label="Setting"):
                 with gr.Row():
                     ip_checkpoint = gr.Dropdown(
-                        choices=get_presets(),
+                        choices=[
+                            "svd",
+                            "svd_xt",
+                            "svd_image_decoder",
+                            "svd_xt_image_decoder",
+                        ],
                         label="Checkpoint",
                         value=preset_default.checkpoint,
                         allow_custom_value=True,
