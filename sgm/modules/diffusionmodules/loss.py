@@ -39,9 +39,7 @@ class StandardDiffusionLoss(nn.Module):
 
         self.batch2model_keys = set(batch2model_keys)
 
-    def get_noised_input(
-        self, sigmas_bc: torch.Tensor, noise: torch.Tensor, input: torch.Tensor
-    ) -> torch.Tensor:
+    def get_noised_input(self, sigmas_bc: torch.Tensor, noise: torch.Tensor, input: torch.Tensor) -> torch.Tensor:
         noised_input = input + noise * sigmas_bc
         return noised_input
 
@@ -64,17 +62,13 @@ class StandardDiffusionLoss(nn.Module):
         input: torch.Tensor,
         batch: Dict,
     ) -> Tuple[torch.Tensor, Dict]:
-        additional_model_inputs = {
-            key: batch[key] for key in self.batch2model_keys.intersection(batch)
-        }
+        additional_model_inputs = {key: batch[key] for key in self.batch2model_keys.intersection(batch)}
         sigmas = self.sigma_sampler(input.shape[0]).to(input)
 
         noise = torch.randn_like(input)
         if self.offset_noise_level > 0.0:
             offset_shape = (
-                (input.shape[0], 1, input.shape[2])
-                if self.n_frames is not None
-                else (input.shape[0], input.shape[1])
+                (input.shape[0], 1, input.shape[2]) if self.n_frames is not None else (input.shape[0], input.shape[1])
             )
             noise = noise + self.offset_noise_level * append_dims(
                 torch.randn(offset_shape, device=input.device),
@@ -83,21 +77,15 @@ class StandardDiffusionLoss(nn.Module):
         sigmas_bc = append_dims(sigmas, input.ndim)
         noised_input = self.get_noised_input(sigmas_bc, noise, input)
 
-        model_output = denoiser(
-            network, noised_input, sigmas, cond, **additional_model_inputs
-        )
+        model_output = denoiser(network, noised_input, sigmas, cond, **additional_model_inputs)
         w = append_dims(self.loss_weighting(sigmas), input.ndim)
         return self.get_loss(model_output, input, w)
 
     def get_loss(self, model_output, target, w):
         if self.loss_type == "l2":
-            return torch.mean(
-                (w * (model_output - target) ** 2).reshape(target.shape[0], -1), 1
-            )
+            return torch.mean((w * (model_output - target) ** 2).reshape(target.shape[0], -1), 1)
         elif self.loss_type == "l1":
-            return torch.mean(
-                (w * (model_output - target).abs()).reshape(target.shape[0], -1), 1
-            )
+            return torch.mean((w * (model_output - target).abs()).reshape(target.shape[0], -1), 1)
         elif self.loss_type == "lpips":
             loss = self.lpips(model_output, target).reshape(-1)
             return loss

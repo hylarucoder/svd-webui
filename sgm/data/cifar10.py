@@ -21,22 +21,16 @@ class CIFAR10Loader(pl.LightningDataModule):
     def __init__(self, batch_size, num_workers=0, shuffle=True):
         super().__init__()
 
-        transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Lambda(lambda x: x * 2.0 - 1.0)]
-        )
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Lambda(lambda x: x * 2.0 - 1.0)])
 
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.shuffle = shuffle
         self.train_dataset = CIFAR10DataDictWrapper(
-            torchvision.datasets.CIFAR10(
-                root=".data/", train=True, download=True, transform=transform
-            )
+            torchvision.datasets.CIFAR10(root=".data/", train=True, download=True, transform=transform)
         )
         self.test_dataset = CIFAR10DataDictWrapper(
-            torchvision.datasets.CIFAR10(
-                root=".data/", train=False, download=True, transform=transform
-            )
+            torchvision.datasets.CIFAR10(root=".data/", train=False, download=True, transform=transform)
         )
 
     def prepare_data(self):

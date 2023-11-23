@@ -21,23 +21,17 @@ class MNISTLoader(pl.LightningDataModule):
     def __init__(self, batch_size, num_workers=0, prefetch_factor=2, shuffle=True):
         super().__init__()
 
-        transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Lambda(lambda x: x * 2.0 - 1.0)]
-        )
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Lambda(lambda x: x * 2.0 - 1.0)])
 
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.prefetch_factor = prefetch_factor if num_workers > 0 else 0
         self.shuffle = shuffle
         self.train_dataset = MNISTDataDictWrapper(
-            torchvision.datasets.MNIST(
-                root=".data/", train=True, download=True, transform=transform
-            )
+            torchvision.datasets.MNIST(root=".data/", train=True, download=True, transform=transform)
         )
         self.test_dataset = MNISTDataDictWrapper(
-            torchvision.datasets.MNIST(
-                root=".data/", train=False, download=True, transform=transform
-            )
+            torchvision.datasets.MNIST(root=".data/", train=False, download=True, transform=transform)
         )
 
     def prepare_data(self):
@@ -77,9 +71,7 @@ if __name__ == "__main__":
             root=".data/",
             train=False,
             download=True,
-            transform=transforms.Compose(
-                [transforms.ToTensor(), transforms.Lambda(lambda x: x * 2.0 - 1.0)]
-            ),
+            transform=transforms.Compose([transforms.ToTensor(), transforms.Lambda(lambda x: x * 2.0 - 1.0)]),
         )
     )
     ex = dset[0]

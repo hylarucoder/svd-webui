@@ -1,0 +1,31 @@
+repos:
+# Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.4
+    hooks:
+      # Run the linter.
+      - id: ruff
+        name: ruff
+        description: "Run 'ruff' for extremely fast Python linting"
+        entry: ruff check --force-exclude
+        language: python
+        types_or: [python, pyi]
+        args: [--fix]
+        minimum_pre_commit_version: "2.9.2"
+      # Run the formatter.
+      - id: ruff-format
+        name: ruff-format
+        description: "Run 'ruff format' for extremely fast Python formatting"
+        entry: ruff format --force-exclude
+        language: python
+        types_or: [python, pyi]
+        minimum_pre_commit_version: "2.9.2"
+  -   repo: https://github.com/pre-commit/mirrors-mypy
+      rev: v1.6.1
+      hooks:
+      - id: mypy
+        name: mypy
+        description: "Run 'mypy' for Python linting"
+        entry: mypy
+        language: python
+        minimum_pre_commit_version: '2.9.2'

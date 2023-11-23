@@ -13,15 +13,14 @@ from packaging import version
 
 from ..modules.autoencoding.regularizers import AbstractRegularizer
 from ..modules.ema import LitEma
-from ..util import (default, get_nested_attribute, get_obj_from_str,
-                    instantiate_from_config)
+from ..util import default, get_nested_attribute, get_obj_from_str, instantiate_from_config
 
 logpy = logging.getLogger(__name__)
 
 
 class AbstractAutoencoder(pl.LightningModule):
-    """
-    This is the base class for all autoencoders, including image autoencoders, image autoencoders with discriminators,
+
+    """This is the base class for all autoencoders, including image autoencoders, image autoencoders with discriminators,
     unCLIP models, etc. Hence, it is fairly general, and specific features
     (e.g. discriminator training, encoding, decoding) must be implemented in subclasses.
     """
@@ -91,17 +90,15 @@ class AbstractAutoencoder(pl.LightningModule):
 
     def instantiate_optimizer_from_config(self, params, lr, cfg):
         logpy.info(f"loading >>> {cfg['target']} <<< optimizer from config")
-        return get_obj_from_str(cfg["target"])(
-            params, lr=lr, **cfg.get("params", dict())
-        )
+        return get_obj_from_str(cfg["target"])(params, lr=lr, **cfg.get("params", dict()))
 
     def configure_optimizers(self) -> Any:
         raise NotImplementedError()
 
 
 class AutoencodingEngine(AbstractAutoencoder):
-    """
-    Base class for all image autoencoders that we train, like VQGAN or AutoencoderKL
+
+    """Base class for all image autoencoders that we train, like VQGAN or AutoencoderKL
     (we also restore them explicitly as special cases for legacy reasons).
     Regularizations such as KL or VQ are moved to the regularizer class.
     """
@@ -132,12 +129,8 @@ class AutoencodingEngine(AbstractAutoencoder):
         self.encoder: torch.nn.Module = instantiate_from_config(encoder_config)
         self.decoder: torch.nn.Module = instantiate_from_config(decoder_config)
         self.loss: torch.nn.Module = instantiate_from_config(loss_config)
-        self.regularization: AbstractRegularizer = instantiate_from_config(
-            regularizer_config
-        )
-        self.optimizer_config = default(
-            optimizer_config, {"target": "torch.optim.Adam"}
-        )
+        self.regularization: AbstractRegularizer = instantiate_from_config(regularizer_config)
+        self.optimizer_config = default(optimizer_config, {"target": "torch.optim.Adam"})
         self.diff_boost_factor = diff_boost_factor
         self.disc_start_iter = disc_start_iter
         self.lr_g_factor = lr_g_factor
@@ -211,20 +204,14 @@ class AutoencodingEngine(AbstractAutoencoder):
         x = self.decoder(z, **kwargs)
         return x
 
-    def forward(
-        self, x: torch.Tensor, **additional_decode_kwargs
-    ) -> Tuple[torch.Tensor, torch.Tensor, dict]:
+    def forward(self, x: torch.Tensor, **additional_decode_kwargs) -> Tuple[torch.Tensor, torch.Tensor, dict]:
         z, reg_log = self.encode(x, return_reg_log=True)
         dec = self.decode(z, **additional_decode_kwargs)
         return z, dec, reg_log
 
-    def inner_training_step(
-        self, batch: dict, batch_idx: int, optimizer_idx: int = 0
-    ) -> torch.Tensor:
+    def inner_training_step(self, batch: dict, batch_idx: int, optimizer_idx: int = 0) -> torch.Tensor:
         x = self.get_input(batch)
-        additional_decode_kwargs = {
-            key: batch[key] for key in self.additional_decode_keys.intersection(batch)
-        }
+        additional_decode_kwargs = {key: batch[key] for key in self.additional_decode_keys.intersection(batch)}
         z, xrec, regularization_log = self(x, **additional_decode_kwargs)
         if hasattr(self.loss, "forward_keys"):
             extra_info = {
@@ -271,9 +258,7 @@ class AutoencodingEngine(AbstractAutoencoder):
             # discriminator
             discloss, log_dict_disc = self.loss(x, xrec, **extra_info)
             # -> discriminator always needs to return a tuple
-            self.log_dict(
-                log_dict_disc, prog_bar=False, logger=True, on_step=True, on_epoch=True
-            )
+            self.log_dict(log_dict_disc, prog_bar=False, logger=True, on_step=True, on_epoch=True)
             return discloss
         else:
             raise NotImplementedError(f"Unknown optimizer {optimizer_idx}")
@@ -289,9 +274,7 @@ class AutoencodingEngine(AbstractAutoencoder):
         opt = opts[optimizer_idx]
         opt.zero_grad()
         with opt.toggle_model():
-            loss = self.inner_training_step(
-                batch, batch_idx, optimizer_idx=optimizer_idx
-            )
+            loss = self.inner_training_step(batch, batch_idx, optimizer_idx=optimizer_idx)
             self.manual_backward(loss)
         opt.step()
 
@@ -364,19 +347,13 @@ class AutoencodingEngine(AbstractAutoencoder):
         if self.trainable_ae_params is None:
             ae_params = self.get_autoencoder_params()
         else:
-            ae_params, num_ae_params = self.get_param_groups(
-                self.trainable_ae_params, self.ae_optimizer_args
-            )
+            ae_params, num_ae_params = self.get_param_groups(self.trainable_ae_params, self.ae_optimizer_args)
             logpy.info(f"Number of trainable autoencoder parameters: {num_ae_params:,}")
         if self.trainable_disc_params is None:
             disc_params = self.get_discriminator_params()
         else:
-            disc_params, num_disc_params = self.get_param_groups(
-                self.trainable_disc_params, self.disc_optimizer_args
-            )
-            logpy.info(
-                f"Number of trainable discriminator parameters: {num_disc_params:,}"
-            )
+            disc_params, num_disc_params = self.get_param_groups(self.trainable_disc_params, self.disc_optimizer_args)
+            logpy.info(f"Number of trainable discriminator parameters: {num_disc_params:,}")
         opt_ae = self.instantiate_optimizer_from_config(
             ae_params,
             default(self.lr_g_factor, 1.0) * self.learning_rate,
@@ -384,23 +361,17 @@ class AutoencodingEngine(AbstractAutoencoder):
         )
         opts = [opt_ae]
         if len(disc_params) > 0:
-            opt_disc = self.instantiate_optimizer_from_config(
-                disc_params, self.learning_rate, self.optimizer_config
-            )
+            opt_disc = self.instantiate_optimizer_from_config(disc_params, self.learning_rate, self.optimizer_config)
             opts.append(opt_disc)
 
         return opts
 
     @torch.no_grad()
-    def log_images(
-        self, batch: dict, additional_log_kwargs: Optional[Dict] = None, **kwargs
-    ) -> dict:
+    def log_images(self, batch: dict, additional_log_kwargs: Optional[Dict] = None, **kwargs) -> dict:
         log = dict()
         additional_decode_kwargs = {}
         x = self.get_input(batch)
-        additional_decode_kwargs.update(
-            {key: batch[key] for key in self.additional_decode_keys.intersection(batch)}
-        )
+        additional_decode_kwargs.update({key: batch[key] for key in self.additional_decode_keys.intersection(batch)})
 
         _, xrec, _ = self(x, **additional_decode_kwargs)
         log["inputs"] = x
@@ -410,9 +381,7 @@ class AutoencodingEngine(AbstractAutoencoder):
         log["diff"] = 2.0 * diff - 1.0
         # diff_boost shows location of small errors, by boosting their
         # brightness.
-        log["diff_boost"] = (
-            2.0 * torch.clamp(self.diff_boost_factor * diff, 0.0, 1.0) - 1
-        )
+        log["diff_boost"] = 2.0 * torch.clamp(self.diff_boost_factor * diff, 0.0, 1.0) - 1
         if hasattr(self.loss, "log_images"):
             log.update(self.loss.log_images(x, xrec))
         with self.ema_scope():
@@ -421,9 +390,7 @@ class AutoencodingEngine(AbstractAutoencoder):
             diff_ema = 0.5 * torch.abs(torch.clamp(xrec_ema, -1.0, 1.0) - x)
             diff_ema.clamp_(0, 1.0)
             log["diff_ema"] = 2.0 * diff_ema - 1.0
-            log["diff_boost_ema"] = (
-                2.0 * torch.clamp(self.diff_boost_factor * diff_ema, 0.0, 1.0) - 1
-            )
+            log["diff_boost_ema"] = 2.0 * torch.clamp(self.diff_boost_factor * diff_ema, 0.0, 1.0) - 1
         if additional_log_kwargs:
             additional_decode_kwargs.update(additional_log_kwargs)
             _, xrec_add, _ = self(x, **additional_decode_kwargs)
@@ -465,9 +432,7 @@ class AutoencodingEngineLegacy(AutoencodingEngine):
         params = super().get_autoencoder_params()
         return params
 
-    def encode(
-        self, x: torch.Tensor, return_reg_log: bool = False
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, dict]]:
+    def encode(self, x: torch.Tensor, return_reg_log: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, dict]]:
         if self.max_batch_size is None:
             z = self.encoder(x)
             z = self.quant_conv(z)
@@ -510,12 +475,7 @@ class AutoencoderKL(AutoencodingEngineLegacy):
         if "lossconfig" in kwargs:
             kwargs["loss_config"] = kwargs.pop("lossconfig")
         super().__init__(
-            regularizer_config={
-                "target": (
-                    "sgm.modules.autoencoding.regularizers"
-                    ".DiagonalGaussianRegularizer"
-                )
-            },
+            regularizer_config={"target": ("sgm.modules.autoencoding.regularizers" ".DiagonalGaussianRegularizer")},
             **kwargs,
         )
 
@@ -529,13 +489,11 @@ class AutoencoderLegacyVQ(AutoencodingEngineLegacy):
         **kwargs,
     ):
         if "lossconfig" in kwargs:
-            logpy.warn(f"Parameter `lossconfig` is deprecated, use `loss_config`.")
+            logpy.warn("Parameter `lossconfig` is deprecated, use `loss_config`.")
             kwargs["loss_config"] = kwargs.pop("lossconfig")
         super().__init__(
             regularizer_config={
-                "target": (
-                    "sgm.modules.autoencoding.regularizers.quantize" ".VectorQuantizer"
-                ),
+                "target": ("sgm.modules.autoencoding.regularizers.quantize" ".VectorQuantizer"),
                 "params": {
                     "n_e": n_embed,
                     "e_dim": embed_dim,
@@ -570,25 +528,19 @@ class AEIntegerWrapper(nn.Module):
     ):
         super().__init__()
         self.model = model
-        assert hasattr(model, "encode") and hasattr(
-            model, "decode"
-        ), "Need AE interface"
+        assert hasattr(model, "encode") and hasattr(model, "decode"), "Need AE interface"
         self.regularization = get_nested_attribute(model, regularization_key)
         self.shape = shape
         self.encoder_kwargs = default(encoder_kwargs, {"return_reg_log": True})
 
     def encode(self, x) -> torch.Tensor:
-        assert (
-            not self.training
-        ), f"{self.__class__.__name__} only supports inference currently"
+        assert not self.training, f"{self.__class__.__name__} only supports inference currently"
         _, log = self.model.encode(x, **self.encoder_kwargs)
         assert isinstance(log, dict)
         inds = log["min_encoding_indices"]
         return rearrange(inds, "b ... -> b (...)")
 
-    def decode(
-        self, inds: torch.Tensor, shape: Union[None, tuple, list] = None
-    ) -> torch.Tensor:
+    def decode(self, inds: torch.Tensor, shape: Union[None, tuple, list] = None) -> torch.Tensor:
         # expect inds shape (b, s) with s = h*w
         shape = default(shape, self.shape)  # Optional[(h, w)]
         if shape is not None:
@@ -605,10 +557,7 @@ class AutoencoderKLModeOnly(AutoencodingEngineLegacy):
             kwargs["loss_config"] = kwargs.pop("lossconfig")
         super().__init__(
             regularizer_config={
-                "target": (
-                    "sgm.modules.autoencoding.regularizers"
-                    ".DiagonalGaussianRegularizer"
-                ),
+                "target": ("sgm.modules.autoencoding.regularizers" ".DiagonalGaussianRegularizer"),
                 "params": {"sample": False},
             },
             **kwargs,

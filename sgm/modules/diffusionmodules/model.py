@@ -24,8 +24,7 @@ from ...modules.attention import LinearAttention, MemoryEfficientCrossAttention
 
 
 def get_timestep_embedding(timesteps, embedding_dim):
-    """
-    This matches the implementation in Denoising Diffusion Probabilistic Models:
+    """This matches the implementation in Denoising Diffusion Probabilistic Models:
     From Fairseq.
     Build sinusoidal embeddings.
     This matches the implementation in tensor2tensor, but differs slightly
@@ -50,9 +49,7 @@ def nonlinearity(x):
 
 
 def Normalize(in_channels, num_groups=32):
-    return torch.nn.GroupNorm(
-        num_groups=num_groups, num_channels=in_channels, eps=1e-6, affine=True
-    )
+    return torch.nn.GroupNorm(num_groups=num_groups, num_channels=in_channels, eps=1e-6, affine=True)
 
 
 class Upsample(nn.Module):
@@ -60,9 +57,7 @@ class Upsample(nn.Module):
         super().__init__()
         self.with_conv = with_conv
         if self.with_conv:
-            self.conv = torch.nn.Conv2d(
-                in_channels, in_channels, kernel_size=3, stride=1, padding=1
-            )
+            self.conv = torch.nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x):
         x = torch.nn.functional.interpolate(x, scale_factor=2.0, mode="nearest")
@@ -77,9 +72,7 @@ class Downsample(nn.Module):
         self.with_conv = with_conv
         if self.with_conv:
             # no asymmetric padding in torch conv, must do it ourselves
-            self.conv = torch.nn.Conv2d(
-                in_channels, in_channels, kernel_size=3, stride=2, padding=0
-            )
+            self.conv = torch.nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=2, padding=0)
 
     def forward(self, x):
         if self.with_conv:
@@ -108,25 +101,17 @@ class ResnetBlock(nn.Module):
         self.use_conv_shortcut = conv_shortcut
 
         self.norm1 = Normalize(in_channels)
-        self.conv1 = torch.nn.Conv2d(
-            in_channels, out_channels, kernel_size=3, stride=1, padding=1
-        )
+        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
         if temb_channels > 0:
             self.temb_proj = torch.nn.Linear(temb_channels, out_channels)
         self.norm2 = Normalize(out_channels)
         self.dropout = torch.nn.Dropout(dropout)
-        self.conv2 = torch.nn.Conv2d(
-            out_channels, out_channels, kernel_size=3, stride=1, padding=1
-        )
+        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
         if self.in_channels != self.out_channels:
             if self.use_conv_shortcut:
-                self.conv_shortcut = torch.nn.Conv2d(
-                    in_channels, out_channels, kernel_size=3, stride=1, padding=1
-                )
+                self.conv_shortcut = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1)
             else:
-                self.nin_shortcut = torch.nn.Conv2d(
-                    in_channels, out_channels, kernel_size=1, stride=1, padding=0
-                )
+                self.nin_shortcut = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0)
 
     def forward(self, x, temb):
         h = x
@@ -152,6 +137,7 @@ class ResnetBlock(nn.Module):
 
 
 class LinAttnBlock(LinearAttention):
+
     """to match AttnBlock usage"""
 
     def __init__(self, in_channels):
@@ -164,18 +150,10 @@ class AttnBlock(nn.Module):
         self.in_channels = in_channels
 
         self.norm = Normalize(in_channels)
-        self.q = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
-        self.k = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
-        self.v = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
-        self.proj_out = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
+        self.q = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.k = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.v = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.proj_out = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
 
     def attention(self, h_: torch.Tensor) -> torch.Tensor:
         h_ = self.norm(h_)
@@ -184,12 +162,8 @@ class AttnBlock(nn.Module):
         v = self.v(h_)
 
         b, c, h, w = q.shape
-        q, k, v = map(
-            lambda x: rearrange(x, "b c h w -> b 1 (h w) c").contiguous(), (q, k, v)
-        )
-        h_ = torch.nn.functional.scaled_dot_product_attention(
-            q, k, v
-        )  # scale is dim ** -0.5 per default
+        q, k, v = map(lambda x: rearrange(x, "b c h w -> b 1 (h w) c").contiguous(), (q, k, v))
+        h_ = torch.nn.functional.scaled_dot_product_attention(q, k, v)  # scale is dim ** -0.5 per default
         # compute attention
 
         return rearrange(h_, "b 1 (h w) c -> b c h w", h=h, w=w, c=c, b=b)
@@ -202,8 +176,8 @@ class AttnBlock(nn.Module):
 
 
 class MemoryEfficientAttnBlock(nn.Module):
-    """
-    Uses xformers efficient implementation,
+
+    """Uses xformers efficient implementation,
     see https://github.com/MatthieuTPHR/diffusers/blob/d80b531ff8060ec1ea982b65a1b8df70f73aa67c/src/diffusers/models/attention.py#L223
     Note: this is a single-head self-attention operation
     """
@@ -214,18 +188,10 @@ class MemoryEfficientAttnBlock(nn.Module):
         self.in_channels = in_channels
 
         self.norm = Normalize(in_channels)
-        self.q = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
-        self.k = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
-        self.v = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
-        self.proj_out = torch.nn.Conv2d(
-            in_channels, in_channels, kernel_size=1, stride=1, padding=0
-        )
+        self.q = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.k = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.v = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
+        self.proj_out = torch.nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1, padding=0)
         self.attention_op: Optional[Any] = None
 
     def attention(self, h_: torch.Tensor) -> torch.Tensor:
@@ -246,16 +212,9 @@ class MemoryEfficientAttnBlock(nn.Module):
             .contiguous(),
             (q, k, v),
         )
-        out = xformers.ops.memory_efficient_attention(
-            q, k, v, attn_bias=None, op=self.attention_op
-        )
+        out = xformers.ops.memory_efficient_attention(q, k, v, attn_bias=None, op=self.attention_op)
 
-        out = (
-            out.unsqueeze(0)
-            .reshape(B, 1, out.shape[1], C)
-            .permute(0, 2, 1, 3)
-            .reshape(B, out.shape[1], C)
-        )
+        out = out.unsqueeze(0).reshape(B, 1, out.shape[1], C).permute(0, 2, 1, 3).reshape(B, out.shape[1], C)
         return rearrange(out, "b (h w) c -> b c h w", b=B, h=H, w=W, c=C)
 
     def forward(self, x, **kwargs):
@@ -282,10 +241,7 @@ def make_attn(in_channels, attn_type="vanilla", attn_kwargs=None):
         "linear",
         "none",
     ], f"attn_type {attn_type} unknown"
-    if (
-        version.parse(torch.__version__) < version.parse("2.0.0")
-        and attn_type != "none"
-    ):
+    if version.parse(torch.__version__) < version.parse("2.0.0") and attn_type != "none":
         assert XFORMERS_IS_AVAILABLE, (
             f"We do not support vanilla attention in {torch.__version__} anymore, "
             f"as it is too expensive. Please install xformers via e.g. 'pip install xformers==0.0.16'"
@@ -296,9 +252,7 @@ def make_attn(in_channels, attn_type="vanilla", attn_kwargs=None):
         assert attn_kwargs is None
         return AttnBlock(in_channels)
     elif attn_type == "vanilla-xformers":
-        logpy.info(
-            f"building MemoryEfficientAttnBlock with {in_channels} in_channels..."
-        )
+        logpy.info(f"building MemoryEfficientAttnBlock with {in_channels} in_channels...")
         return MemoryEfficientAttnBlock(in_channels)
     elif type == "memory-efficient-cross-attn":
         attn_kwargs["query_dim"] = in_channels
@@ -348,9 +302,7 @@ class Model(nn.Module):
             )
 
         # downsampling
-        self.conv_in = torch.nn.Conv2d(
-            in_channels, self.ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv_in = torch.nn.Conv2d(in_channels, self.ch, kernel_size=3, stride=1, padding=1)
 
         curr_res = resolution
         in_ch_mult = (1,) + tuple(ch_mult)
@@ -427,9 +379,7 @@ class Model(nn.Module):
 
         # end
         self.norm_out = Normalize(block_in)
-        self.conv_out = torch.nn.Conv2d(
-            block_in, out_ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv_out = torch.nn.Conv2d(block_in, out_ch, kernel_size=3, stride=1, padding=1)
 
     def forward(self, x, t=None, context=None):
         # assert x.shape[2] == x.shape[3] == self.resolution
@@ -466,9 +416,7 @@ class Model(nn.Module):
         # upsampling
         for i_level in reversed(range(self.num_resolutions)):
             for i_block in range(self.num_res_blocks + 1):
-                h = self.up[i_level].block[i_block](
-                    torch.cat([h, hs.pop()], dim=1), temb
-                )
+                h = self.up[i_level].block[i_block](torch.cat([h, hs.pop()], dim=1), temb)
                 if len(self.up[i_level].attn) > 0:
                     h = self.up[i_level].attn[i_block](h)
             if i_level != 0:
@@ -514,9 +462,7 @@ class Encoder(nn.Module):
         self.in_channels = in_channels
 
         # downsampling
-        self.conv_in = torch.nn.Conv2d(
-            in_channels, self.ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv_in = torch.nn.Conv2d(in_channels, self.ch, kernel_size=3, stride=1, padding=1)
 
         curr_res = resolution
         in_ch_mult = (1,) + tuple(ch_mult)
@@ -638,19 +584,13 @@ class Decoder(nn.Module):
         block_in = ch * ch_mult[self.num_resolutions - 1]
         curr_res = resolution // 2 ** (self.num_resolutions - 1)
         self.z_shape = (1, z_channels, curr_res, curr_res)
-        logpy.info(
-            "Working with z of shape {} = {} dimensions.".format(
-                self.z_shape, np.prod(self.z_shape)
-            )
-        )
+        logpy.info("Working with z of shape {} = {} dimensions.".format(self.z_shape, np.prod(self.z_shape)))
 
         make_attn_cls = self._make_attn()
         make_resblock_cls = self._make_resblock()
         make_conv_cls = self._make_conv()
         # z to block_in
-        self.conv_in = torch.nn.Conv2d(
-            z_channels, block_in, kernel_size=3, stride=1, padding=1
-        )
+        self.conv_in = torch.nn.Conv2d(z_channels, block_in, kernel_size=3, stride=1, padding=1)
 
         # middle
         self.mid = nn.Module()
@@ -696,9 +636,7 @@ class Decoder(nn.Module):
 
         # end
         self.norm_out = Normalize(block_in)
-        self.conv_out = make_conv_cls(
-            block_in, out_ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv_out = make_conv_cls(block_in, out_ch, kernel_size=3, stride=1, padding=1)
 
     def _make_attn(self) -> Callable:
         return make_attn

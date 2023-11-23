@@ -10,9 +10,14 @@ from einops import rearrange
 from torch.utils.checkpoint import checkpoint
 
 from ...modules.attention import SpatialTransformer
-from ...modules.diffusionmodules.util import (avg_pool_nd, conv_nd, linear,
-                                              normalization,
-                                              timestep_embedding, zero_module)
+from ...modules.diffusionmodules.util import (
+    avg_pool_nd,
+    conv_nd,
+    linear,
+    normalization,
+    timestep_embedding,
+    zero_module,
+)
 from ...modules.video_attention import SpatialVideoTransformer
 from ...util import exists
 
@@ -20,9 +25,8 @@ logpy = logging.getLogger(__name__)
 
 
 class AttentionPool2d(nn.Module):
-    """
-    Adapted from CLIP: https://github.com/openai/CLIP/blob/main/clip/model.py
-    """
+
+    """Adapted from CLIP: https://github.com/openai/CLIP/blob/main/clip/model.py"""
 
     def __init__(
         self,
@@ -32,9 +36,7 @@ class AttentionPool2d(nn.Module):
         output_dim: Optional[int] = None,
     ):
         super().__init__()
-        self.positional_embedding = nn.Parameter(
-            th.randn(embed_dim, spacial_dim**2 + 1) / embed_dim**0.5
-        )
+        self.positional_embedding = nn.Parameter(th.randn(embed_dim, spacial_dim**2 + 1) / embed_dim**0.5)
         self.qkv_proj = conv_nd(1, embed_dim, 3 * embed_dim, 1)
         self.c_proj = conv_nd(1, embed_dim, output_dim or embed_dim, 1)
         self.num_heads = embed_dim // num_heads_channels
@@ -52,20 +54,17 @@ class AttentionPool2d(nn.Module):
 
 
 class TimestepBlock(nn.Module):
-    """
-    Any module where forward() takes timestep embeddings as a second argument.
-    """
+
+    """Any module where forward() takes timestep embeddings as a second argument."""
 
     @abstractmethod
     def forward(self, x: th.Tensor, emb: th.Tensor):
-        """
-        Apply the module to `x` given `emb` timestep embeddings.
-        """
+        """Apply the module to `x` given `emb` timestep embeddings."""
 
 
 class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
-    """
-    A sequential module that passes timestep embeddings to the children that
+
+    """A sequential module that passes timestep embeddings to the children that
     support it as an extra input.
     """
 
@@ -83,9 +82,7 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
         for layer in self:
             module = layer
 
-            if isinstance(module, TimestepBlock) and not isinstance(
-                module, VideoResBlock
-            ):
+            if isinstance(module, TimestepBlock) and not isinstance(module, VideoResBlock):
                 x = layer(x, emb)
             elif isinstance(module, VideoResBlock):
                 x = layer(x, emb, num_video_frames, image_only_indicator)
@@ -105,8 +102,8 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
 
 
 class Upsample(nn.Module):
-    """
-    An upsampling layer with an optional convolution.
+
+    """An upsampling layer with an optional convolution.
     :param channels: channels in the inputs and outputs.
     :param use_conv: a bool determining if a convolution is applied.
     :param dims: determines if the signal is 1D, 2D, or 3D. If 3D, then
@@ -132,9 +129,7 @@ class Upsample(nn.Module):
         self.third_up = third_up
         self.scale_factor = scale_factor
         if use_conv:
-            self.conv = conv_nd(
-                dims, self.channels, self.out_channels, kernel_size, padding=padding
-            )
+            self.conv = conv_nd(dims, self.channels, self.out_channels, kernel_size, padding=padding)
 
     def forward(self, x: th.Tensor) -> th.Tensor:
         assert x.shape[1] == self.channels
@@ -158,8 +153,8 @@ class Upsample(nn.Module):
 
 
 class Downsample(nn.Module):
-    """
-    A downsampling layer with an optional convolution.
+
+    """A downsampling layer with an optional convolution.
     :param channels: channels in the inputs and outputs.
     :param use_conv: a bool determining if a convolution is applied.
     :param dims: determines if the signal is 1D, 2D, or 3D. If 3D, then
@@ -208,8 +203,8 @@ class Downsample(nn.Module):
 
 
 class ResBlock(TimestepBlock):
-    """
-    A residual block that can optionally change the number of channels.
+
+    """A residual block that can optionally change the number of channels.
     :param channels: the number of input channels.
     :param emb_channels: the number of timestep embedding channels.
     :param dropout: the rate of dropout.
@@ -272,9 +267,7 @@ class ResBlock(TimestepBlock):
             self.h_upd = self.x_upd = nn.Identity()
 
         self.skip_t_emb = skip_t_emb
-        self.emb_out_channels = (
-            2 * self.out_channels if use_scale_shift_norm else self.out_channels
-        )
+        self.emb_out_channels = 2 * self.out_channels if use_scale_shift_norm else self.out_channels
         if self.skip_t_emb:
             logpy.info(f"Skipping timestep embedding in {self.__class__.__name__}")
             assert not self.use_scale_shift_norm
@@ -307,15 +300,12 @@ class ResBlock(TimestepBlock):
         if self.out_channels == channels:
             self.skip_connection = nn.Identity()
         elif use_conv:
-            self.skip_connection = conv_nd(
-                dims, channels, self.out_channels, kernel_size, padding=padding
-            )
+            self.skip_connection = conv_nd(dims, channels, self.out_channels, kernel_size, padding=padding)
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
     def forward(self, x: th.Tensor, emb: th.Tensor) -> th.Tensor:
-        """
-        Apply the block to a Tensor, conditioned on a timestep embedding.
+        """Apply the block to a Tensor, conditioned on a timestep embedding.
         :param x: an [N x C x ...] Tensor of features.
         :param emb: an [N x emb_channels] Tensor of timestep embeddings.
         :return: an [N x C x ...] Tensor of outputs.
@@ -355,8 +345,8 @@ class ResBlock(TimestepBlock):
 
 
 class AttentionBlock(nn.Module):
-    """
-    An attention block that allows spatial positions to attend to each other.
+
+    """An attention block that allows spatial positions to attend to each other.
     Originally ported from here, but adapted to the N-d case.
     https://github.com/hojonathanho/diffusion/blob/1e0dceb3b3495bbe19116a5e1b3596cd0706c543/diffusion_tf/models/unet.py#L66.
     """
@@ -403,17 +393,15 @@ class AttentionBlock(nn.Module):
 
 
 class QKVAttentionLegacy(nn.Module):
-    """
-    A module which performs QKV attention. Matches legacy QKVAttention + input/ouput heads shaping
-    """
+
+    """A module which performs QKV attention. Matches legacy QKVAttention + input/ouput heads shaping"""
 
     def __init__(self, n_heads: int):
         super().__init__()
         self.n_heads = n_heads
 
     def forward(self, qkv: th.Tensor) -> th.Tensor:
-        """
-        Apply QKV attention.
+        """Apply QKV attention.
         :param qkv: an [N x (H * 3 * C) x T] tensor of Qs, Ks, and Vs.
         :return: an [N x (H * C) x T] tensor after attention.
         """
@@ -422,26 +410,22 @@ class QKVAttentionLegacy(nn.Module):
         ch = width // (3 * self.n_heads)
         q, k, v = qkv.reshape(bs * self.n_heads, ch * 3, length).split(ch, dim=1)
         scale = 1 / math.sqrt(math.sqrt(ch))
-        weight = th.einsum(
-            "bct,bcs->bts", q * scale, k * scale
-        )  # More stable with f16 than dividing afterwards
+        weight = th.einsum("bct,bcs->bts", q * scale, k * scale)  # More stable with f16 than dividing afterwards
         weight = th.softmax(weight.float(), dim=-1).type(weight.dtype)
         a = th.einsum("bts,bcs->bct", weight, v)
         return a.reshape(bs, -1, length)
 
 
 class QKVAttention(nn.Module):
-    """
-    A module which performs QKV attention and splits in a different order.
-    """
+
+    """A module which performs QKV attention and splits in a different order."""
 
     def __init__(self, n_heads: int):
         super().__init__()
         self.n_heads = n_heads
 
     def forward(self, qkv: th.Tensor) -> th.Tensor:
-        """
-        Apply QKV attention.
+        """Apply QKV attention.
         :param qkv: an [N x (3 * H * C) x T] tensor of Qs, Ks, and Vs.
         :return: an [N x (H * C) x T] tensor after attention.
         """
@@ -470,8 +454,8 @@ class Timestep(nn.Module):
 
 
 class UNetModel(nn.Module):
-    """
-    The full UNet model with attention and timestep embedding.
+
+    """The full UNet model with attention and timestep embedding.
     :param in_channels: channels in the input Tensor.
     :param model_channels: base channel count for the model.
     :param out_channels: channels in the output Tensor.
@@ -533,14 +517,10 @@ class UNetModel(nn.Module):
             num_heads_upsample = num_heads
 
         if num_heads == -1:
-            assert (
-                num_head_channels != -1
-            ), "Either num_heads or num_head_channels has to be set"
+            assert num_head_channels != -1, "Either num_heads or num_head_channels has to be set"
 
         if num_head_channels == -1:
-            assert (
-                num_heads != -1
-            ), "Either num_heads or num_head_channels has to be set"
+            assert num_heads != -1, "Either num_heads or num_head_channels has to be set"
 
         self.in_channels = in_channels
         self.model_channels = model_channels
@@ -621,11 +601,7 @@ class UNetModel(nn.Module):
                 raise ValueError
 
         self.input_blocks = nn.ModuleList(
-            [
-                TimestepEmbedSequential(
-                    conv_nd(dims, in_channels, model_channels, 3, padding=1)
-                )
-            ]
+            [TimestepEmbedSequential(conv_nd(dims, in_channels, model_channels, 3, padding=1))]
         )
         self._feature_size = model_channels
         input_block_chans = [model_channels]
@@ -657,10 +633,7 @@ class UNetModel(nn.Module):
                     else:
                         disabled_sa = False
 
-                    if (
-                        not exists(num_attention_blocks)
-                        or nr < num_attention_blocks[level]
-                    ):
+                    if not exists(num_attention_blocks) or nr < num_attention_blocks[level]:
                         layers.append(
                             SpatialTransformer(
                                 ch,
@@ -692,9 +665,7 @@ class UNetModel(nn.Module):
                             down=True,
                         )
                         if resblock_updown
-                        else Downsample(
-                            ch, conv_resample, dims=dims, out_channels=out_ch
-                        )
+                        else Downsample(ch, conv_resample, dims=dims, out_channels=out_ch)
                     )
                 )
                 ch = out_ch
@@ -770,10 +741,7 @@ class UNetModel(nn.Module):
                     else:
                         disabled_sa = False
 
-                    if (
-                        not exists(num_attention_blocks)
-                        or i < num_attention_blocks[level]
-                    ):
+                    if not exists(num_attention_blocks) or i < num_attention_blocks[level]:
                         layers.append(
                             SpatialTransformer(
                                 ch,
@@ -821,8 +789,7 @@ class UNetModel(nn.Module):
         y: Optional[th.Tensor] = None,
         **kwargs,
     ) -> th.Tensor:
-        """
-        Apply the model to an input batch.
+        """Apply the model to an input batch.
         :param x: an [N x C x ...] Tensor of inputs.
         :param timesteps: a 1-D batch of timesteps.
         :param context: conditioning plugged in via crossattn

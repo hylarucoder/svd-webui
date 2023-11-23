@@ -15,6 +15,7 @@ def weights_init(m):
 
 
 class NLayerDiscriminator(nn.Module):
+
     """Defines a PatchGAN discriminator as in Pix2Pix
     --> see https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py
     """
@@ -32,9 +33,7 @@ class NLayerDiscriminator(nn.Module):
             norm_layer = nn.BatchNorm2d
         else:
             norm_layer = ActNorm
-        if (
-            type(norm_layer) == functools.partial
-        ):  # no need to use bias as BatchNorm2d has affine parameters
+        if type(norm_layer) == functools.partial:  # no need to use bias as BatchNorm2d has affine parameters
             use_bias = norm_layer.func != nn.BatchNorm2d
         else:
             use_bias = norm_layer != nn.BatchNorm2d
