@@ -65,7 +65,7 @@ def cli(
     ckpt_dir = get_ckpt_dir()
     if checkpoint in ["svd", "svd_image_decoder"]:
         download_hf_model("stabilityai/stable-video-diffusion-img2vid", ckpt_dir, checkpoint)
-    if checkpoint in ["svd", "svd_image_decoder"]:
+    if checkpoint in ["svd_xt", "svd_xt_image_decoder"]:
         download_hf_model("stabilityai/stable-video-diffusion-img2vid-xt", ckpt_dir, checkpoint)
 
     progress(0.03, "Loading model")
