@@ -17,17 +17,17 @@ from sgm.util import instantiate_from_config
 
 
 def cli(
-        image: Image,
-        num_frames: int,
-        num_steps: int,
-        checkpoint: str,
-        fps_id: int,
-        motion_bucket_id,
-        cond_aug,
-        seed,
-        decoding_t,
-        progress: gr.Progress,
-        device: str = "cuda",
+    image: Image,
+    num_frames: int,
+    num_steps: int,
+    checkpoint: str,
+    fps_id: int,
+    motion_bucket_id,
+    cond_aug,
+    seed,
+    decoding_t,
+    progress: gr.Progress,
+    device: str = "cuda",
 ):
     progress(0.01, "Processing Image")
     model_config = f"configs/{checkpoint}.yaml"
@@ -42,7 +42,7 @@ def cli(
         width, height = map(lambda x: x - x % 64, (w, h))
         image = image.resize((width, height))
         gr.Warning(
-            f"WARNING: Your image is of size {h}x{w} which is not divisible by 64. We are resizing to {width}x{height}!"
+            f"WARNING: Your image is of size {w}x{h} which is not divisible by 64. We are resizing to {width}x{height}!"
         )
 
     image = ToTensor()(image)
@@ -85,7 +85,6 @@ def cli(
         lowvram_mode=True,
     )
     torch.manual_seed(seed)
-    progress(0.05, "Loading model success")
 
     value_dict = {
         "motion_bucket_id": motion_bucket_id,
@@ -129,9 +128,15 @@ def cli(
             def denoiser(input, sigma, c):
                 return model.denoiser(model.model, input, sigma, c, **additional_model_inputs)
 
+            progress(0.10, "start sampling")
             samples_z = model.sampler(denoiser, randn, cond=c, uc=uc)
             model.en_and_decode_n_samples_a_time = decoding_t
-            samples_x = model.decode_first_stage(samples_z)
+            progress(0.20, "start denoising")
+
+            def processing_callback(i, total):
+                progress(0.20 + 0.80 * i / total, "denoising")
+
+            samples_x = model.decode_first_stage(samples_z, processing_callback=processing_callback)
             samples = torch.clamp((samples_x + 1.0) / 2.0, min=0.0, max=1.0)
 
             os.makedirs(output_folder, exist_ok=True)
@@ -143,6 +148,7 @@ def cli(
                 fps_id + 1,
                 (samples.shape[-1], samples.shape[-2]),
             )
+            progress(0.95, "export mp4")
 
             vid = (rearrange(samples, "t c h w -> t h w c") * 255).cpu().numpy().astype(np.uint8)
             for frame in vid:
@@ -208,21 +214,22 @@ def download_hf_model(repo_id, local_dir, f):
 
 
 def load_model(
-        config: str,
-        device: str,
-        num_frames: int,
-        num_steps: int,
-        lowvram_mode: bool = False,
+    config: str,
+    device: str,
+    num_frames: int,
+    num_steps: int,
+    lowvram_mode: bool = False,
 ):
     config = OmegaConf.load(config)
-    if device == "cuda":
-        config.model.params.conditioner_config.params.emb_models[
-            0
-        ].params.open_clip_embedding_config.params.init_device = device
+    config.model.params.conditioner_config.params.emb_models[
+        0
+    ].params.open_clip_embedding_config.params.init_device = device
 
     config.model.params.sampler_config.params.num_steps = num_steps
     config.model.params.sampler_config.params.guider_config.params.num_frames = num_frames
     config.model.params.ckpt_path = get_ckpt_dir() + "/" + config.model.params.ckpt_path
+
+    model = instantiate_from_config(config.model)
 
     if device == "cuda":
         with torch.device(device):
@@ -230,8 +237,6 @@ def load_model(
     else:
         model = instantiate_from_config(config.model).to(device).eval()
 
-    if lowvram_mode:
-        model.model.half()
     return model
 
 
