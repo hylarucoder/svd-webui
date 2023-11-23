@@ -18,9 +18,12 @@ from sgm.util import instantiate_from_config
 
 def resize_image_to_w1024(image: Image):
     w, h = image.size
-    if w > 1024:
-        image = image.resize((1024, int(1024 * h / w)))
-    return image
+    # vertical or horizontal
+    vertical = h > w
+    if vertical:
+        return image.resize((int(1024 * w / h), 1024))
+    return image.resize((1024, int(1024 * h / w)))
+
 
 def cli(
     image: Image,
