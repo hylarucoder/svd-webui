@@ -25,20 +25,15 @@ python -m pip install pytorch_lightning torchdata webdataset transformers kornia
 
 ```
 
-
 ## Online GPU
 
 ### AutoDL
 
-```bash
-cd webui && python webui.py
-```
+https://twitter.com/hylarucoder/status/1727922785828417805
 
 ### Colab
 
-TODO
-
-### Colab
+https://github.com/hylarucoder/svd-webui/blob/main/svd_webui_colab.ipynb
 
 ## Credit
 
