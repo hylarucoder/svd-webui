@@ -1,6 +1,9 @@
 # svd-webui
 
 
+> You can also use ComfyUI for only 8 vram
+> try my workflow https://github.com/hylarucoder/comfyui-workflow/blob/main/svd/svd-image-to-video.json
+
 ## Installation
 
 ```bash
