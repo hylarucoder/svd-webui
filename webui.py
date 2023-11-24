@@ -289,7 +289,10 @@ with gr.Blocks(
 ) as demo:
     render_ui()
 
+share = False
 server_port = 7860
 if os.environ.get("SVD_PORT"):
     server_port = int(os.environ.get("SVD_PORT"))
-demo.launch(server_name="0.0.0.0", server_port=server_port)
+if os.environ.get("SVD_SHARE"):
+    share = int(os.environ.get("SVD_SHARE"))
+demo.launch(server_name="0.0.0.0", server_port=server_port, share=share)
