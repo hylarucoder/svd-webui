@@ -22,7 +22,23 @@ python -m pip install onnxruntime-silicon
 
 # 
 python -m pip install pytorch_lightning torchdata webdataset transformers kornia open-clip-torch
+
 ```
+
+
+## Online GPU
+
+### AutoDL
+
+```bash
+cd webui && python webui.py
+```
+
+### Colab
+
+TODO
+
+### Colab
 
 ## Credit
 
